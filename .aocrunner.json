@@ -30,13 +30,13 @@
           "3017",
           "2844"
         ],
-        "time": 1.101416
+        "time": 0.970917
       },
       "part2": {
-        "solved": false,
-        "result": null,
+        "solved": true,
+        "result": "72513",
         "attempts": [],
-        "time": null
+        "time": 0.525375
       }
     },
     {
