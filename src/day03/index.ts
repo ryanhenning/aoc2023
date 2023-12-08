@@ -21,8 +21,14 @@ interface NumberLocation {
   columns: number[];
 }
 
+interface GearLocation {
+  row: number;
+  column: number;
+}
+
 const symbolRegex = (charToTest: string) => /[^a-zA-Z0-9.]/.test(charToTest);
 const numberRegex = (charToTest: string) => /[0-9]/.test(charToTest);
+const gearRegex = (charToTest: string) => /\*/.test(charToTest);
 
 const getNumbers = (schematicData: string[][]): NumberLocation[] => {
   const numberLocations: NumberLocation[] = [];
@@ -50,6 +56,22 @@ const getNumbers = (schematicData: string[][]): NumberLocation[] => {
   });
   return numberLocations;
 };
+
+const getGears = (schematicData: string[][]): GearLocation[] => {
+  const gearLocations: GearLocation[] = [];
+
+  schematicData.forEach((row, rowIndex) => {
+    row.forEach((character, colIndex) => {
+      if (gearRegex(character))
+        gearLocations.push({ row: rowIndex, column: colIndex });
+    });
+  });
+
+  return gearLocations;
+};
+
+const flattenNumber = (number: string[]) =>
+  parseInt(number.reduce((acc, value) => (acc += value), ""));
 
 const checkIfNumberIsValid = (
   numberLocation: NumberLocation,
@@ -108,6 +130,50 @@ const checkIfNumberIsValid = (
   return isValid;
 };
 
+const determineGearRatios = (
+  allGears: GearLocation[],
+  allNumbers: NumberLocation[],
+  schematic: Schematic,
+) => {
+  const gearRatios: number[] = [];
+
+  allGears.forEach((gear) => {
+    const adjacentSpaces = {
+      previousRow: schematic.rows >= 0 ? gear.row! - 1 : -1,
+      currentRow: gear.row!,
+      nextRow: schematic.rows >= gear.row! ? gear.row! + 1 : -1,
+      leftColumn: gear.column > 0 ? gear.column - 1 : -1,
+      currentColumn: gear.column,
+      rightColumn: gear.column < schematic.columns ? gear.column + 1 : -1,
+    };
+
+    const adjacentNumbers: number[] = [];
+
+    allNumbers.forEach((numberLocation) => {
+      // Check the row of each number to see if it matches current, previous or next row
+      if (
+        numberLocation.row !== adjacentSpaces.previousRow &&
+        numberLocation.row !== adjacentSpaces.currentRow &&
+        numberLocation.row !== adjacentSpaces.nextRow
+      ) {
+        return;
+      }
+      if (
+        numberLocation.columns.includes(adjacentSpaces.leftColumn) ||
+        numberLocation.columns.includes(adjacentSpaces.currentColumn) ||
+        numberLocation.columns.includes(adjacentSpaces.rightColumn)
+      )
+        adjacentNumbers.push(flattenNumber(numberLocation.number));
+    });
+
+    // if adjacent numbers length === 2, multiply and push to ratios
+    if (adjacentNumbers.length === 2)
+      gearRatios.push(adjacentNumbers[0] * adjacentNumbers[1]);
+  });
+
+  return gearRatios.reduce((acc, ratio) => (acc += ratio), 0);
+};
+
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
 
@@ -117,9 +183,7 @@ const part1 = (rawInput: string) => {
 
   return allNumbers.reduce((acc, numberLocation) => {
     if (checkIfNumberIsValid(numberLocation, schematic)) {
-      return (acc += parseInt(
-        numberLocation.number.reduce((acc, value) => (acc += value), ""),
-      ));
+      return (acc += flattenNumber(numberLocation.number));
     }
     return acc;
   }, 0);
@@ -128,7 +192,15 @@ const part1 = (rawInput: string) => {
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
 
-  return;
+  const schematic = loadSchematic(input);
+
+  const allNumbers = getNumbers(schematic.data);
+
+  const allGears = getGears(schematic.data);
+
+  const gearRatios = determineGearRatios(allGears, allNumbers, schematic);
+
+  return gearRatios;
 };
 
 run({
@@ -182,10 +254,49 @@ run({
   },
   part2: {
     tests: [
-      // {
-      //   input: ``,
-      //   expected: "",
-      // },
+      {
+        input: `467..114..
+...*......
+..35..633.
+......#...
+617*......
+.....+.58.
+..592.....
+......755.
+...$.*....
+.664.598..`,
+        expected: 467835,
+      },
+      {
+        input: `12.......*..
++.........34
+.......-12..
+..78........
+..*....60...
+78..........
+.......23...
+....90*12...
+............
+2.2......12.
+.*.........*
+1.1.......56`,
+        expected: 6756,
+      },
+      {
+        input: `12.......*..
++.........34
+.......-12..
+..78........
+..*....60...
+78.........9
+.5.....23..$
+8...90*12...
+............
+2.2......12.
+.*.........*
+1.1..503+.56`,
+        expected: 6756,
+      },
     ],
     solution: part2,
   },
