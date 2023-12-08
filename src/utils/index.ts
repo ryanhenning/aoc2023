@@ -29,3 +29,5 @@
  *     import { myUtil } from '../utils'
  *
  */
+export * from "./stringUtils.js";
+export * from "./setUtils.js";
