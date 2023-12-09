@@ -31,3 +31,4 @@
  */
 export * from "./stringUtils.js";
 export * from "./setUtils.js";
+export * from "./regex.js";
